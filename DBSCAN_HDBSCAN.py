@@ -1,30 +1,23 @@
+
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.io import arff
 
-from sklearn.cluster import  AgglomerativeClustering
+from sklearn.cluster import DBSCAN
 from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
 from scipy.cluster.hierarchy import dendrogram, linkage
 
-#  Ici on identifie les paramètres principaux pour chaque méthode
-# - KMeans: n_clusters, init, n_init
-# - Agglomératif: n_clusters, linkage
-# - DBSCAN: eps, min_samples
-# - HDBSCAN: min_cluster_size, min_samples
+import hdbscan
 
+#Jeux de données
 path = "../artificial/"
 dataframe, meta = arff.loadarff(path + 'hepta.arff')
-# print(dataframe.dtype)
-# print(dataframe.dtype.names)
 x = dataframe['x']#np.array(dataframe['tumor'],dtype=float)
 y = dataframe['y']#np.array(dataframe['relapse'],dtype=float)
 X=np.array([[x[i],y[i]] for i in range(len(x))])
-# print(X[:,0])
-# print(X[:,1])
 
 
-#Fonction d'affichage
-
+#Fonctions utiles
 def plot_clusters(X, labels, title=""):
     plt.figure(figsize=(6,5))
     plt.scatter(X[:,0], X[:,1], c=labels, cmap="viridis", s=30, alpha=0.8)
@@ -43,28 +36,27 @@ def evaluate_clustering(X, labels):
         "Davies-Bouldin": davies_bouldin_score(X, labels)
     }
 
+#  Ici on identifie les paramètres principaux pour chaque méthode
+# - KMeans: n_clusters, init, n_init
+# - Agglomératif: n_clusters, linkage
+# - DBSCAN: eps, min_samples
+# - HDBSCAN: min_cluster_size, min_samples
 
-# Modèles
+print("Objectif 1 : Identification des hyperparamètres importants ✔")
 
-model = AgglomerativeClustering(n_clusters=5)
-results = {}
 
-# #Execution
-labels = model.fit_predict(X)
-# iteration = model.n_iter_
-# inertie = model.inertia_
-# centroids = model.cluster_centers_
 
-#Resultat
-# print(f"iteration :  {iteration}")
-# print(f"inertie   :  {inertie}")
-result = evaluate_clustering(X, labels)
-print(result)
-plot_clusters(X, labels, "Agglomeratif résultat")
+# Pour DBSCAN et HDBSCAN → on teste plusieurs eps / min_cluster_size
+dbscan = DBSCAN(eps=0.3, min_samples=5)
+labels = dbscan.fit_predict(X)
+plot_clusters(X, labels, "DBSCAN (eps=0.3, min_samples=5)")
+print("DBSCAN:", evaluate_clustering(X, labels))
 
-# Dendrogramme pour Agglomératif
-Z = linkage(X, method="ward")
-plt.figure(figsize=(10,5))
-dendrogram(Z, truncate_mode="level", p=5)
-plt.title("Dendrogramme (Agglomératif)")
-plt.show()
+hdb = hdbscan.HDBSCAN(min_cluster_size=5)
+labels = hdb.fit_predict(X)
+plot_clusters(X, labels, "HDBSCAN (min_cluster_size=5)")
+print("HDBSCAN:", evaluate_clustering(X, labels))
+
+dbscan = DBSCAN(eps=0.2, min_samples=5)
+labels_dbscan = dbscan.fit_predict(X)
+plot_clusters(X, labels_dbscan, "DBSCAN sur Moons (réussite → clusters en croissant)")
